@@ -13,90 +13,89 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * A person using the system — either submitting raise requests (role EMPLOYEE)
- * or deciding on their direct reports' requests (role MANAGER). See PRD
- * ## Access Control. HR and CEO roles are out of scope for the MVP (see
- * PRD ## Non-Goals) and are not modeled here yet.
+ * A person using the system — either submitting raise requests (role EMPLOYEE) or deciding on their
+ * direct reports' requests (role MANAGER). See PRD ## Access Control. HR and CEO roles are out of
+ * scope for the MVP (see PRD ## Non-Goals) and are not modeled here yet.
  */
 @Entity
 @Table(name = "employees")
 public class Employee {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+  @Column(nullable = false, unique = true)
+  private String email;
 
-    @Column(name = "full_name", nullable = false)
-    private String fullName;
+  @Column(name = "full_name", nullable = false)
+  private String fullName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Role role;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    private Employee manager;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "manager_id")
+  private Employee manager;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "position_id", nullable = false)
-    private Position position;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "position_id", nullable = false)
+  private Position position;
 
-    protected Employee() {
-        // JPA
-    }
+  protected Employee() {
+    // JPA
+  }
 
-    public Employee(String email, String fullName, Role role, Employee manager, Position position) {
-        this.email = email;
-        this.fullName = fullName;
-        this.role = role;
-        this.manager = manager;
-        this.position = position;
-    }
+  public Employee(String email, String fullName, Role role, Employee manager, Position position) {
+    this.email = email;
+    this.fullName = fullName;
+    this.role = role;
+    this.manager = manager;
+    this.position = position;
+  }
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public String getEmail() {
+    return email;
+  }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public String getFullName() {
-        return fullName;
-    }
+  public String getFullName() {
+    return fullName;
+  }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+  public void setFullName(String fullName) {
+    this.fullName = fullName;
+  }
 
-    public Role getRole() {
-        return role;
-    }
+  public Role getRole() {
+    return role;
+  }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
+  public void setRole(Role role) {
+    this.role = role;
+  }
 
-    public Employee getManager() {
-        return manager;
-    }
+  public Employee getManager() {
+    return manager;
+  }
 
-    public void setManager(Employee manager) {
-        this.manager = manager;
-    }
+  public void setManager(Employee manager) {
+    this.manager = manager;
+  }
 
-    public Position getPosition() {
-        return position;
-    }
+  public Position getPosition() {
+    return position;
+  }
 
-    public void setPosition(Position position) {
-        this.position = position;
-    }
+  public void setPosition(Position position) {
+    this.position = position;
+  }
 }
