@@ -169,13 +169,13 @@ Add `@PreAuthorize("hasRole('EMPLOYEE')")` to submit/mine and `@PreAuthorize("ha
 ### Phase 2: Move identity to session
 
 #### Automated
-- [x] 2.1 `./mvnw -B package -DskipTests` succeeds with the new routes and `@PreAuthorize` annotations
+- [x] 2.1 `./mvnw -B package -DskipTests` succeeds with the new routes and `@PreAuthorize` annotations — bbf8c1e
 
 ### Phase 3: Update and add tests
 
 #### Automated
-- [x] 3.1 `./mvnw test` — full suite green (0 failures/errors)
-- [x] 3.2 `./mvnw spotless:check` passes
+- [x] 3.1 `./mvnw test` — full suite green (0 failures/errors) — bbf8c1e
+- [x] 3.2 `./mvnw spotless:check` passes — bbf8c1e
 
 ### Phase 4: Minimal frontend login screen
 
