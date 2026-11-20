@@ -1,0 +1,30 @@
+### Variables
+@host = http://localhost:8081
+
+### Login — correct password (expect 200 + Set-Cookie: JSESSIONID, AuthResponse body)
+POST {{host}}/api/login
+Content-Type: application/json
+
+{
+  "email": "manager@example.com",
+  "password": "TestPass123!"
+}
+
+### Login — wrong password (expect 401 {"error":"Invalid email or password"})
+POST {{host}}/api/login
+Content-Type: application/json
+
+{
+  "email": "manager@example.com",
+  "password": "wrong"
+}
+
+### Me — unauthenticated, no cookie sent (expect 401 {"error":"Authentication required"})
+GET {{host}}/api/me
+
+### Me — authenticated (run the first "Login" request above in the same IntelliJ HTTP Client
+### session first — it stores the session cookie automatically and this request reuses it)
+GET {{host}}/api/me
+
+### Logout (expect 200)
+POST {{host}}/api/logout

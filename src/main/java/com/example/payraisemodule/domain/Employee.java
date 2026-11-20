@@ -28,6 +28,9 @@ public class Employee {
   @Column(nullable = false, unique = true)
   private String email;
 
+  @Column(name = "password_hash", nullable = false)
+  private String passwordHash;
+
   @Column(name = "full_name", nullable = false)
   private String fullName;
 
@@ -47,12 +50,19 @@ public class Employee {
     // JPA
   }
 
-  public Employee(String email, String fullName, Role role, Employee manager, Position position) {
+  public Employee(
+      String email,
+      String fullName,
+      Role role,
+      Employee manager,
+      Position position,
+      String passwordHash) {
     this.email = email;
     this.fullName = fullName;
     this.role = role;
     this.manager = manager;
     this.position = position;
+    this.passwordHash = passwordHash;
   }
 
   public Long getId() {
@@ -65,6 +75,14 @@ public class Employee {
 
   public void setEmail(String email) {
     this.email = email;
+  }
+
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
   }
 
   public String getFullName() {

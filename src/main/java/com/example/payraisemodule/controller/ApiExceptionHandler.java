@@ -26,4 +26,11 @@ public class ApiExceptionHandler {
   public ResponseEntity<Map<String, String>> handleConflict(RuntimeException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
   }
+
+  @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+  public ResponseEntity<Map<String, String>> handleAuthenticationException(
+      org.springframework.security.core.AuthenticationException ex) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body(Map.of("error", "Invalid email or password"));
+  }
 }
