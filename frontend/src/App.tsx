@@ -5,6 +5,7 @@ function App() {
     <div className="flex min-h-svh flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-semibold">Pay Raise Module</h1>
       <Button>shadcn/ui działa</Button>
+		<h6>Udało się :) </h6>
     </div>
   )
 }

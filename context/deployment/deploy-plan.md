@@ -1,7 +1,7 @@
 ---
 project: "Pay Raise Module"
 platform: Railway
-status: code-ready
+status: live (backend + frontend deployed; budget alert + push-trigger verification outstanding)
 updated: 2026-11-20
 ---
 
@@ -48,22 +48,26 @@ Executes the decision in `@context/foundation/infrastructure.md` (Railway, over 
 - [X] **Config-as-Code → Infrastructure-as-Code migration** (discovered live via CLI, not in the original research): Railway deprecated `railway.json`/`railway.toml` in favor of `.railway/railway.ts`; the old format only works until **2026-12-01** — before this project's 2026-12-06 hard deadline. Done: `npm install railway` at repo root (devtool only — see `@AGENTS.md`'s Deployment section for why this doesn't violate the toolchain-separation rule; `node_modules`/root `package.json` are new, `node_modules` added to `.gitignore`), then `railway config migrate --apply --variables=unmanaged --service backend`, hand-edited `.railway/railway.ts` to add the `frontend` service with `source.rootDirectory: "frontend"` (the migrate command only discovers per-service Config-as-Code, it doesn't know about monorepo subdirectories — that's authored by hand, once, per Railway's own IaC docs), `railway config plan` → `railway config apply --yes` → `railway config migrate cutover --yes` (reported "nothing to do", confirmed via `railway config migrate status` that both services are fully off Config as Code). Deleted the now-dead `railway.json` / `frontend/railway.json`.
 - [X] **Windows-only CLI bug hit and worked around**: `railway config plan`/`apply` shell out to the `railway` binary to version-check itself, via Node's `execFileSync` *without* `shell: true` — this cannot launch Windows `.cmd` shims (a well-known Node/Windows limitation), so every `railway config plan` failed with a misleading "CLI too old" error regardless of actual version (`railway --version` was 5.75.0, well above the 5.42.1 minimum). Worked around by patching the installed `node_modules/railway/dist/iac/index.js`'s `execFileSync` call to pass `shell: true` locally (not committed — `node_modules` is gitignored, so this patch doesn't persist across `npm install`; re-apply if `npm install` is re-run on Windows before Railway ships a fix upstream).
 
-## Phase 4 — Domain generation + env wiring (strict order)
+## Phase 4 — Domain generation + env wiring (strict order) ✅ done (2026-11-20)
 
-- [ ] `[HUMAN]` Generate the **backend** public domain first (Settings → Networking → Generate Domain).
-- [ ] `[HUMAN]` Set frontend env var `VITE_API_URL=https://<backend-public-domain>` (Vite bakes this in at build time — redeploy frontend after setting it).
-- [ ] `[HUMAN]` Generate the **frontend** public domain.
-- [ ] `[HUMAN]` Set backend env var `CORS_ALLOWED_ORIGINS=https://<frontend-public-domain>` (add `http://localhost:5173` too, comma-separated, for local-against-prod testing). **Never use `*.railway.internal`/`RAILWAY_PRIVATE_DOMAIN` here — the browser can't resolve it.**
-- [ ] `[HUMAN]` Redeploy both services to pick up the new vars.
+- [X] `[AGENT]` Generated backend public domain via `railway domain --service backend --port 8081 --json` → `https://backend-production-3c0382d1.up.railway.app`.
+- [X] `[AGENT]` Set `VITE_API_URL=https://backend-production-3c0382d1.up.railway.app` on frontend via `railway variable set`.
+- [X] `[AGENT]` Generated frontend public domain via `railway domain --service frontend --port 5173 --json` → `https://frontend-production-036a1c6a.up.railway.app`.
+- [X] `[AGENT]` Set `CORS_ALLOWED_ORIGINS=https://frontend-production-036a1c6a.up.railway.app,http://localhost:5173` on backend. **Never use `*.railway.internal`/`RAILWAY_PRIVATE_DOMAIN` here — confirmed working as the public domain.**
+- [X] `[AGENT]` Redeployed both via `railway service redeploy --from-source` after pushing the Phase 1/2 code changes (the GitHub-sourced services otherwise would have built the pre-actuator/pre-port-fix code still on `main` at service-creation time).
 
-## Phase 5 — Validation
+## Phase 5 — Validation ✅ done (2026-11-20)
 
-- [ ] `curl https://<backend-public-domain>/actuator/health` → expect `{"status":"UP"}`.
-- [ ] `[HUMAN]` Confirm each service's build log shows Dockerfile build steps (`maven:3.9-eclipse-temurin-21`, `COPY pom.xml` / `node:22-alpine`, `npm ci`) — not Railpack/Nixpacks auto-detect. See Phase 6 if it shows Railpack anyway.
-- [ ] `[HUMAN]` Open the frontend public URL in a browser — expect the current placeholder shadcn page (no business UI/API calls exist yet).
-- [ ] `[AGENT]` `railway logs --service backend` / `--service frontend` — confirm no startup errors.
-- [ ] `[HUMAN]` Set a usage/budget alert (Project Settings → Usage), e.g. $20/mo threshold.
-- [ ] `[HUMAN]` Push a trivial commit to `main` and confirm both services redeploy automatically without any manual trigger — proves the auto-deploy-on-push wiring from Phase 3 actually works end to end.
+- [X] `curl https://backend-production-3c0382d1.up.railway.app/actuator/health` → `{"groups":["liveness","readiness"],"status":"UP"}`, HTTP 200.
+- [X] Confirmed via `railway logs --build` that both services' build logs show Dockerfile steps (Maven `package`/`repackage` + `[stage-1] COPY app.jar` for backend; `npm ci`/`npm run build`/`npm install -g serve` for frontend) — not Railpack/Nixpacks.
+- [X] Frontend public URL returns HTTP 200 (current placeholder shadcn page — no business UI/API calls exist yet).
+- [X] `railway logs --service backend` / `--service frontend` — no startup errors in either; backend shows a clean Spring Boot startup connecting to Postgres over `postgres.railway.internal`.
+- [X] `[HUMAN]` **Usage/budget alert** — initially blocked (`railway usage limit set` required an active plan subscription, not just a payment method). Set via dashboard at `railway.com/workspace/usage` → "Set Usage Limits": **soft $7 / hard $10**. Verified via `railway usage limit status`. Note: this project's estimated cost is ~$10-25/mo, so a $10 hard limit may trigger an automatic shutdown of all workspace services early in the first billing cycle — raise it if that's not the intended behavior.
+- [ ] `[HUMAN]` Push a trivial commit to `main` and confirm both services redeploy automatically without any manual trigger — proves the auto-deploy-on-push wiring from Phase 3 actually works end to end (not yet explicitly tested — the redeploys so far were all `--from-source` CLI-triggered, not a real push-triggered one).
+
+## Real finding not in the original research: `railway domain --port` must match Railway's *actual* injected `$PORT`, not the app's documented/Dockerfile `EXPOSE` port
+
+Both services initially 502'd after their first successful deploy. Root cause: Railway injects its own dynamic `PORT` (both services got `8080` in this project, not `8081`/`5173` as in the Dockerfiles' `EXPOSE`/`ENV PORT` fallback defaults), and `railway domain --port <N>` must target whatever port the app *actually* bound to at runtime, confirmed via `railway logs` (backend logged "Tomcat initialized with port 8080"; frontend's `serve` logged "Accepting connections at http://localhost:8080"). Fixed via `railway domain update <domain> --port 8080 --service <name>` for both. **Lesson: always check `railway logs` for the actual bound port before/after generating a domain — don't assume the Dockerfile's `EXPOSE`/`ENV PORT` default is what Railway actually injects.**
 
 ## Phase 6 — Edge cases / extra support steps
 
@@ -82,7 +86,8 @@ Executes the decision in `@context/foundation/infrastructure.md` (Railway, over 
 
 | Date | Service | Commit SHA | Notes |
 |---|---|---|---|
-| _(fill in after first successful deploy)_ | | | |
+| 2026-11-20 | backend | `a27040b` | First live deploy. `/actuator/health` → UP. Domain port fixed to 8080 (see finding above). |
+| 2026-11-20 | frontend | `a27040b` | First live deploy. Placeholder UI only, HTTP 200. Domain port fixed to 8080. |
 
 ## Out of Scope
 
