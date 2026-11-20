@@ -1,7 +1,7 @@
 ---
 project: "Pay Raise Module"
 platform: Railway
-status: live (backend + frontend deployed; budget alert + push-trigger verification outstanding)
+status: live (all phases complete — backend + frontend deployed, budget alert set, auto-deploy-on-push verified end-to-end)
 updated: 2026-11-20
 ---
 
@@ -63,7 +63,7 @@ Executes the decision in `@context/foundation/infrastructure.md` (Railway, over 
 - [X] Frontend public URL returns HTTP 200 (current placeholder shadcn page — no business UI/API calls exist yet).
 - [X] `railway logs --service backend` / `--service frontend` — no startup errors in either; backend shows a clean Spring Boot startup connecting to Postgres over `postgres.railway.internal`.
 - [X] `[HUMAN]` **Usage/budget alert** — initially blocked (`railway usage limit set` required an active plan subscription, not just a payment method). Set via dashboard at `railway.com/workspace/usage` → "Set Usage Limits": **soft $7 / hard $10**. Verified via `railway usage limit status`. Note: this project's estimated cost is ~$10-25/mo, so a $10 hard limit may trigger an automatic shutdown of all workspace services early in the first billing cycle — raise it if that's not the intended behavior.
-- [ ] `[HUMAN]` Push a trivial commit to `main` and confirm both services redeploy automatically without any manual trigger — proves the auto-deploy-on-push wiring from Phase 3 actually works end to end (not yet explicitly tested — the redeploys so far were all `--from-source` CLI-triggered, not a real push-triggered one).
+- [X] **Auto-deploy on push confirmed end-to-end**: commit `4a91420` pushed to `main` (a real `git push`, not a CLI-triggered redeploy); `railway service status --service frontend` showed a *new* `deploymentId` enter `BUILDING` within seconds with zero manual trigger, finished `SUCCESS`, and `curl` against the frontend's public URL confirmed the pushed change (`<h6>Udało się :)</h6>`) was live. Railway's native GitHub integration is doing its job — no GitHub Actions needed.
 
 ## Real finding not in the original research: `railway domain --port` must match Railway's *actual* injected `$PORT`, not the app's documented/Dockerfile `EXPOSE` port
 
