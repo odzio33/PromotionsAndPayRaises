@@ -11,7 +11,7 @@ class RaiseRequestTest {
   private final Position position =
       new Position("Backend Developer", new BigDecimal("8000"), new BigDecimal("12000"));
   private final Employee employee =
-      new Employee("employee@example.com", "Ann Employee", Role.EMPLOYEE, null, position);
+      new Employee("employee@example.com", "Ann Employee", Role.EMPLOYEE, null, position, "hash");
 
   private RaiseRequest newRequest() {
     return new RaiseRequest(

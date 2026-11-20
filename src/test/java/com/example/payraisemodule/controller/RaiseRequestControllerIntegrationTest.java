@@ -1,6 +1,7 @@
 package com.example.payraisemodule.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,27 +14,32 @@ import com.example.payraisemodule.domain.RequestStatus;
 import com.example.payraisemodule.domain.Role;
 import com.example.payraisemodule.repository.EmployeeRepository;
 import com.example.payraisemodule.repository.PositionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * End-to-end coverage of US-01 (PRD): an employee submits a raise request and their manager can see
  * it alongside the position's salary band and decide on it. Exercised through the real HTTP +
- * persistence stack (MockMvc + H2), i.e. a test from the user's perspective rather than a unit test
- * of a single class.
+ * persistence stack (MockMvc + H2), authenticating as real sessions rather than trusting a
+ * URL-supplied id, i.e. a test from the user's perspective rather than a unit test of a single
+ * class.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class RaiseRequestControllerIntegrationTest {
+
+  private static final String PASSWORD = "TestPass123!";
 
   @Autowired private MockMvc mockMvc;
 
@@ -42,6 +48,8 @@ class RaiseRequestControllerIntegrationTest {
   @Autowired private PositionRepository positionRepository;
 
   @Autowired private EmployeeRepository employeeRepository;
+
+  @Autowired private PasswordEncoder passwordEncoder;
 
   private Employee manager;
   private Employee employee;
@@ -53,14 +61,39 @@ class RaiseRequestControllerIntegrationTest {
             new Position("Backend Developer", new BigDecimal("8000"), new BigDecimal("12000")));
     manager =
         employeeRepository.save(
-            new Employee("manager@example.com", "Mo Manager", Role.MANAGER, null, position));
+            new Employee(
+                "manager@example.com",
+                "Mo Manager",
+                Role.MANAGER,
+                null,
+                position,
+                passwordEncoder.encode(PASSWORD)));
     employee =
         employeeRepository.save(
-            new Employee("employee@example.com", "Ann Employee", Role.EMPLOYEE, manager, position));
+            new Employee(
+                "employee@example.com",
+                "Ann Employee",
+                Role.EMPLOYEE,
+                manager,
+                position,
+                passwordEncoder.encode(PASSWORD)));
+  }
+
+  private MockHttpSession loginAs(String email) throws Exception {
+    String loginBody = objectMapper.writeValueAsString(new LoginPayload(email, PASSWORD));
+    var result =
+        mockMvc
+            .perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(loginBody))
+            .andExpect(status().isOk())
+            .andReturn();
+    return (MockHttpSession) result.getRequest().getSession(false);
   }
 
   @Test
   void employeeSubmitsRequestManagerSeesBandAndApprovesEndToEnd() throws Exception {
+    MockHttpSession employeeSession = loginAs(employee.getEmail());
+    MockHttpSession managerSession = loginAs(manager.getEmail());
+
     // 1. Employee submits a raise request with a justification and requested amount (FR-001).
     String submitBody =
         objectMapper.writeValueAsString(
@@ -69,7 +102,9 @@ class RaiseRequestControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post("/api/employees/{id}/raise-requests", employee.getId())
+            post("/api/raise-requests")
+                .session(employeeSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(submitBody))
         .andExpect(status().isCreated())
@@ -78,7 +113,7 @@ class RaiseRequestControllerIntegrationTest {
     // 2. The manager sees it alongside the salary band for the employee's position (FR-004/FR-005).
     var pendingResult =
         mockMvc
-            .perform(get("/api/managers/{id}/raise-requests/pending", manager.getId()))
+            .perform(get("/api/raise-requests/pending").session(managerSession))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(1)))
             .andExpect(jsonPath("$[0].positionTitle").value("Backend Developer"))
@@ -102,10 +137,9 @@ class RaiseRequestControllerIntegrationTest {
 
     mockMvc
         .perform(
-            post(
-                    "/api/managers/{managerId}/raise-requests/{requestId}/decision",
-                    manager.getId(),
-                    requestId)
+            post("/api/raise-requests/{requestId}/decision", requestId)
+                .session(managerSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(decisionBody))
         .andExpect(status().isOk())
@@ -114,7 +148,7 @@ class RaiseRequestControllerIntegrationTest {
 
     // 4. The employee sees the completed, approved request in their own history (FR-003).
     mockMvc
-        .perform(get("/api/employees/{id}/raise-requests", employee.getId()))
+        .perform(get("/api/raise-requests/mine").session(employeeSession))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].status").value("APPROVED"));
@@ -122,21 +156,24 @@ class RaiseRequestControllerIntegrationTest {
 
   @Test
   void secondRequestIsBlockedOnlyAfterAPriorRequestIsCompleted() throws Exception {
+    MockHttpSession employeeSession = loginAs(employee.getEmail());
+    MockHttpSession managerSession = loginAs(manager.getEmail());
+
     String firstSubmission =
         objectMapper.writeValueAsString(
             new SubmitPayload(new BigDecimal("11000"), "First attempt."));
 
     mockMvc
         .perform(
-            post("/api/employees/{id}/raise-requests", employee.getId())
+            post("/api/raise-requests")
+                .session(employeeSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(firstSubmission))
         .andExpect(status().isCreated());
 
     var pendingResult =
-        mockMvc
-            .perform(get("/api/managers/{id}/raise-requests/pending", manager.getId()))
-            .andReturn();
+        mockMvc.perform(get("/api/raise-requests/pending").session(managerSession)).andReturn();
     Long requestId =
         objectMapper
             .readTree(pendingResult.getResponse().getContentAsString())
@@ -149,10 +186,9 @@ class RaiseRequestControllerIntegrationTest {
         objectMapper.writeValueAsString(new SendBackPayload("Add more detail, please."));
     mockMvc
         .perform(
-            post(
-                    "/api/managers/{managerId}/raise-requests/{requestId}/send-back",
-                    manager.getId(),
-                    requestId)
+            post("/api/raise-requests/{requestId}/send-back", requestId)
+                .session(managerSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(sendBackBody))
         .andExpect(status().isOk())
@@ -163,7 +199,9 @@ class RaiseRequestControllerIntegrationTest {
             new SubmitPayload(new BigDecimal("11500"), "Revised with more detail."));
     mockMvc
         .perform(
-            post("/api/employees/{id}/raise-requests", employee.getId())
+            post("/api/raise-requests")
+                .session(employeeSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(secondSubmission))
         .andExpect(status().isCreated());
@@ -171,9 +209,7 @@ class RaiseRequestControllerIntegrationTest {
     // Now approve the (second, still-pending) request — this is the first COMPLETED request this
     // year.
     var pendingAfterSecond =
-        mockMvc
-            .perform(get("/api/managers/{id}/raise-requests/pending", manager.getId()))
-            .andReturn();
+        mockMvc.perform(get("/api/raise-requests/pending").session(managerSession)).andReturn();
     Long secondRequestId =
         objectMapper
             .readTree(pendingAfterSecond.getResponse().getContentAsString())
@@ -187,10 +223,9 @@ class RaiseRequestControllerIntegrationTest {
                 RequestStatus.APPROVED, DecisionType.WITHIN_BAND, "Approved on resubmission."));
     mockMvc
         .perform(
-            post(
-                    "/api/managers/{managerId}/raise-requests/{requestId}/decision",
-                    manager.getId(),
-                    secondRequestId)
+            post("/api/raise-requests/{requestId}/decision", secondRequestId)
+                .session(managerSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(decisionBody))
         .andExpect(status().isOk());
@@ -201,11 +236,15 @@ class RaiseRequestControllerIntegrationTest {
             new SubmitPayload(new BigDecimal("12000"), "Trying again too soon."));
     mockMvc
         .perform(
-            post("/api/employees/{id}/raise-requests", employee.getId())
+            post("/api/raise-requests")
+                .session(employeeSession)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(thirdSubmission))
         .andExpect(status().isConflict());
   }
+
+  private record LoginPayload(String email, String password) {}
 
   private record SubmitPayload(BigDecimal requestedAmount, String justification) {}
 

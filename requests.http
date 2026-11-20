@@ -6,7 +6,7 @@ POST {{host}}/api/login
 Content-Type: application/json
 
 {
-  "email": "manager@example.com",
+  "email": "manager@example2.com",
   "password": "TestPass123!"
 }
 
@@ -28,3 +28,6 @@ GET {{host}}/api/me
 
 ### Logout (expect 200)
 POST {{host}}/api/logout
+
+###
+GET {{host}}/api/raise-requests/mine

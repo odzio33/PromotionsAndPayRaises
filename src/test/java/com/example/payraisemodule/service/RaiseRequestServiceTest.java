@@ -42,10 +42,13 @@ class RaiseRequestServiceTest {
     service = new RaiseRequestService(raiseRequestRepository, employeeRepository);
     position = new Position("Backend Developer", new BigDecimal("8000"), new BigDecimal("12000"));
     manager =
-        withId(new Employee("manager@example.com", "Mo Manager", Role.MANAGER, null, position), 1L);
+        withId(
+            new Employee("manager@example.com", "Mo Manager", Role.MANAGER, null, position, "hash"),
+            1L);
     employee =
         withId(
-            new Employee("employee@example.com", "Ann Employee", Role.EMPLOYEE, manager, position),
+            new Employee(
+                "employee@example.com", "Ann Employee", Role.EMPLOYEE, manager, position, "hash"),
             2L);
   }
 

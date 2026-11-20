@@ -158,24 +158,24 @@ Add `@PreAuthorize("hasRole('EMPLOYEE')")` to submit/mine and `@PreAuthorize("ha
 ### Phase 1: Backend auth infrastructure
 
 #### Automated
-- [x] 1.1 `./mvnw spotless:apply && spotless:check` passes
-- [x] 1.2 `./mvnw -B package -DskipTests` succeeds
+- [x] 1.1 `./mvnw spotless:apply && spotless:check` passes — f03229f
+- [x] 1.2 `./mvnw -B package -DskipTests` succeeds — f03229f
 
 #### Manual
-- [x] 1.3 Login with a seeded test account returns 200 + session cookie
-- [x] 1.4 Login with a wrong password returns 401 `{"error":"Invalid email or password"}`
-- [x] 1.5 `/api/me` with no cookie returns 401 JSON, not an HTML login page
+- [x] 1.3 Login with a seeded test account returns 200 + session cookie — f03229f
+- [x] 1.4 Login with a wrong password returns 401 `{"error":"Invalid email or password"}` — f03229f
+- [x] 1.5 `/api/me` with no cookie returns 401 JSON, not an HTML login page — f03229f
 
 ### Phase 2: Move identity to session
 
 #### Automated
-- [ ] 2.1 `./mvnw -B package -DskipTests` succeeds with the new routes and `@PreAuthorize` annotations
+- [x] 2.1 `./mvnw -B package -DskipTests` succeeds with the new routes and `@PreAuthorize` annotations
 
 ### Phase 3: Update and add tests
 
 #### Automated
-- [ ] 3.1 `./mvnw test` — full suite green (0 failures/errors)
-- [ ] 3.2 `./mvnw spotless:check` passes
+- [x] 3.1 `./mvnw test` — full suite green (0 failures/errors)
+- [x] 3.2 `./mvnw spotless:check` passes
 
 ### Phase 4: Minimal frontend login screen
 

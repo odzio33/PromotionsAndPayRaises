@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 /** Wires a JSON-API-friendly session security chain (no HTML form-login flow). */
 @Configuration
@@ -33,6 +34,10 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    // The H2 console is served by its own Servlet, not the DispatcherServlet, which makes
+    // the default (DispatcherServlet-path-aware) PathPatternRequestMatcher unreliable for
+    // it — a RegexRequestMatcher matches the raw request URI directly and sidesteps that.
+    var h2Console = RegexRequestMatcher.regexMatcher("/h2-console.*");
     http.cors(Customizer.withDefaults())
         .csrf(
             csrf ->
@@ -43,12 +48,15 @@ public class SecurityConfig {
                     // never carry a token issued by a prior response. The H2 console is a
                     // local-dev-only tool (disabled outside the default profile) with its
                     // own form handling, so it's exempted too.
-                    .ignoringRequestMatchers("/api/login", "/h2-console/**"))
+                    .ignoringRequestMatchers("/api/login")
+                    .ignoringRequestMatchers(h2Console))
         // The H2 console renders itself in an iframe; the default DENY would block it.
         .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/api/login", "/actuator/health", "/h2-console/**")
+                a.requestMatchers("/api/login", "/actuator/health")
+                    .permitAll()
+                    .requestMatchers(h2Console)
                     .permitAll()
                     .anyRequest()
                     .authenticated())
