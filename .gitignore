@@ -37,3 +37,6 @@ build/
 
 ### Unrelated scaffold leftover ###
 /bustling-binary/
+
+### Railway IaC tooling (root-level, deployment-only — not the app toolchain) ###
+/node_modules/

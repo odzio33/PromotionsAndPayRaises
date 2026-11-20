@@ -81,11 +81,7 @@ The team deployed Spring Boot + Postgres on Railway in December, right before th
 
 ## Getting Started
 
-1. Push the existing `pom.xml` / `src/` to the GitHub repo already connected (`github.com/odzio33/PromotionsAndPayRaises`) — Railway's Railpack builder auto-detects the Maven project on connect.
-2. Add `.system.properties` at the repo root with `java.runtime.version=21` to pin the JDK, avoiding the silent-mismatch risk above.
-3. Run `railway init` then `railway deploy --template postgres` to add a co-located Postgres instance on the same private network.
-4. Set `DB_HOST`/`DB_USERNAME`/`DB_PASSWORD` (matching `application-docker.properties`) via `railway variables set`, pointing at the Postgres plugin's internal connection string.
-5. Generate a public domain under the service's Networking tab, then verify with `curl` against a health endpoint before considering the deploy live.
+Superseded by the phased execution plan at `@context/deployment/deploy-plan.md` (written after this research, once the actual repo state was checked against it — e.g. the repo already has a root `Dockerfile` pinning `eclipse-temurin:21`, so the plan forces Railway's `DOCKERFILE` builder via `railway.json` instead of relying on `.system.properties` + Railpack auto-detection). That file tracks phase-by-phase progress with checkboxes and a running known-good-deployment log; this section is kept only as a historical pointer.
 
 ## Out of Scope
 

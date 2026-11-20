@@ -13,6 +13,11 @@ Pay Raise Module: a raise/promotion approval tool. Spring Boot (Java 21, Maven) 
 - `src/main/java/com/example/payraisemodule/` — layered by concern: `domain/`, `dto/`, `repository/`, `service/`, `controller/`. Tests mirror this under `src/test/java/...`.
 - `frontend/src/` — React app; `components/ui/` is shadcn-generated (regenerate via `npx shadcn add <name>` rather than hand-editing structure), `lib/utils.ts` holds `cn()`. Path alias `@/*` maps to `frontend/src/*` (see `@frontend/vite.config.ts`).
 - `context/foundation/` — PRD, tech-stack hand-off, and shape-notes for this project; read `@context/foundation/prd.md` for domain rules (approval routing, access control) before changing business logic.
+- `frontend/.env.example` documents `VITE_API_URL` (read via `import.meta.env.VITE_API_URL`) as the backend API base; no client code consumes it yet.
+
+## Deployment
+
+Railway (`backend` + `frontend` services, plus a Postgres plugin) — see `@context/foundation/infrastructure.md` for the platform decision and `@context/deployment/deploy-plan.md` for the rollout plan/status. `.railway/railway.ts` (Railway's Infrastructure-as-Code format, not the deprecated `railway.json`) pins both services' Dockerfile builder, the `frontend` service's `rootDirectory`, and the backend's `/actuator/health` check. The root `package.json`/`node_modules` exist only to run the `railway` npm package for this IaC file (`railway config plan`/`apply`) — not an app build/lint tool, so it doesn't violate the backend/frontend toolchain-separation rule above.
 
 ## Build, Test, and Development Commands
 
